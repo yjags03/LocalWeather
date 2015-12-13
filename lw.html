@@ -1,0 +1,239 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Local Weather Display</title>
+	<meta charset="utf-8" />
+    <script src="js/jquery-2.1.4.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+    <style>
+        #app_body{
+            /*background-image:url("images/sunny_spring.jpg");
+            background-repeat: no-repeat;
+            background-position: center;*/            
+        }
+        .sup{
+            vertical-align:super;
+        }
+        
+    </style>
+    <script>
+        $(document).ready(function () {
+
+            var appKeyWeatherMap = "487b141bd6080bb6a810a0b02673f12e";
+            //var location = [];
+            //location.push("12.9833,77.5833");
+            getLocation();
+            //alert(loc);
+            var dataip;
+
+            function getWeatherData(location, units) {
+
+            }
+
+            function getLocation() {
+                $.get("http://ipinfo.io/json", function (data) {
+                    //alert(data);
+
+                    dataip = data;
+
+                    $("#location_header")
+                        .append(data.city + ", ")
+                        .append(data.region + ", ")
+                        .append(data.country + "<br>")
+                        .append("Weather Report");
+
+                    getLocalWeather(data.loc,"C");
+                    getLocalWeatherForeCast(data.loc,"C");
+                    //var testLoc = "35.685,139.7513889";
+                   // getLocalWeather(testLoc);
+                    //getLocalWeatherForeCast(testLoc);
+
+                });
+            }
+
+            function getLocalWeather(location,unit)
+            {
+                var latitude = location.split(",")[0];
+                var longitude = location.split(",")[1];
+                //alert(latitude);
+                //alert(longitude);
+
+                var weatherAPIURL = "http://api.openweathermap.org/data/2.5/weather?lat=" + latitude + "&lon=" + longitude + "&appid=" + appKeyWeatherMap;
+                //alert(weatherAPIURL);
+
+                $.get(weatherAPIURL, function (weatherData) {
+                    var temparature = weatherData["main"]["temp"];
+                    //alert(temparature);
+                    $("#observation_time").html("<h1>" + "Observation time : " + "<br>" + convertUnixTimetoDate(weatherData["dt"]) + "</h1>");
+                    $("#weather_icon").attr("src", "http://openweathermap.org/img/w/" + weatherData.weather[0]["icon"] + ".png")
+
+                    
+                    $("#current_temp").html("<b>" + convertKelvin(weatherData["main"]["temp"], unit) + " &deg;" + unit + "</b>");
+                    $("#current_description").html("<i>" + firstToUpperCase(weatherData.weather[0]["description"]) + "</i>");
+                    $("#main_pressure").html(weatherData["main"]["pressure"] + " hPa");
+
+                    $("#main_humidity").html(weatherData["main"]["humidity"] + " %");
+                    $("#min_temp").html(convertKelvin(weatherData["main"]["temp_min"],unit) + " &deg;" + unit);
+                    $("#max_temp").html(convertKelvin(weatherData["main"]["temp_max"],unit) + " &deg;" + unit);
+
+                });
+            }
+
+            function getLocalWeatherForeCast(location,unit)
+            {
+                //alert(location);
+                var latitude = location.split(",")[0];
+                var longitude = location.split(",")[1];
+                var weatherAPIForeCastURL = "http://api.openweathermap.org/data/2.5/forecast/dialy?lat=" + latitude + "&lon=" + longitude + "&appid=" + appKeyWeatherMap + "&cnt=5";
+
+                $.get(weatherAPIForeCastURL, function (weatherForeCastData) {
+
+                    var foreCastDataList = weatherForeCastData["list"];
+
+                    var trHTML = '';
+
+                    //alert(foreCastDataList);
+                    for(var i=0;i<foreCastDataList.length;i++)
+                    {
+                        trHTML += '<tr><td>' + convertUnixTimetoDate(foreCastDataList[i]["dt"])
+                            + '</td><td>' + convertKelvin(foreCastDataList[i]["main"]["temp_min"],unit) + " &deg;" + unit
+                            + '</td><td>' + convertKelvin(foreCastDataList[i]["main"]["temp_max"],unit) + " &deg;" + unit
+                            + '</td><td>' + "<div style=\"float:left\">" + foreCastDataList[i]["weather"][0]["description"] + "</div>" + foreCastImage(foreCastDataList[i]["weather"][0]["icon"]); // + "<div style=\"clear:both\"/>";
+                            + '</td></tr>';
+                    }
+                    $("#forecast_table").find("tr:gt(0)").remove();
+                    $("#forecast_table").append(trHTML);
+
+                });
+
+            }
+
+            $("#btn_c").on("click", function () {
+                //alert("Centigrade clicked");
+                getLocalWeather(dataip.loc, "C");
+                getLocalWeatherForeCast(dataip.loc, "C");
+            });
+
+            $("#btn_f").on("click", function () {
+                //alert("Foreingheit clicked");
+                getLocalWeather(dataip.loc, "F");
+                getLocalWeatherForeCast(dataip.loc, "F");
+            });
+
+
+        });
+
+        function convertUnixTimetoDate(unixTime)
+        {
+            var a = new Date(unixTime * 1000);
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var year = a.getFullYear();
+            var month = months[a.getMonth()];
+            var date = a.getDate();
+            var hour = a.getHours();
+            var min = a.getMinutes();
+            var sec = a.getSeconds();
+            var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min;
+            return time;
+        }
+
+        function foreCastImage(iconText)
+        {
+            var resultImage = "<div style=\"float:right\">" + "<img  height=\"30px\" src=" + "http://openweathermap.org/img/w/" + iconText + ".png" + "></img>" + "</div>";
+            //alert(resultImage);
+            return resultImage;            
+        }
+
+        function firstToUpperCase(str) {
+            return str.substr(0, 1).toUpperCase() + str.substr(1);
+        }
+
+        function convertKelvin(temp,unit)
+        {
+            if (unit == "C")
+             {
+                return Math.round(temp - 273.15);
+            }
+            else
+            {
+                var cTemp = (temp - 273.15);
+                var fTemp = (cTemp * (9 / 5)) + 32.0;
+                return Math.round(fTemp);
+            }
+
+        }
+     
+    </script>
+</head>
+<body id="app_body">
+    <div class="container-fluid">
+        <div id="main_div" class="row">
+            <div class="col-md-6 col-md-offset-3 text-center">
+                <h1>Yarams FreeCodeCamp ZipLine</h1>
+                <h2>Local Weather Map</h2>
+                <div class="text-center"><h1 id="location_header"></h1></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 col-md-offset-2">
+                <div id="current_weather" class="text-left">
+                    
+                    <div><span id="observation_time" class="text-info"></span></div>
+
+                    <div>
+                        <img id="weather_icon" />
+                        <span id="current_temp"></span>     
+                        <!--
+                        <span class="temp_unit">&deg;C</span>
+                            -->                   
+                        <span><button id="btn_c" class="btn btn-primary">&deg;C</button></span>
+                        <span><button id="btn_f" class="btn btn-primary">&deg;F</button></span>
+                    </div>
+                    <div id="current_description"></div>
+                    <!-- Striped table-->
+                    <div>
+                        <table class="table table-responsive table-bordered table-hover table-striped">
+                            <tr>
+                                <td>Pressure</td>
+                                <td id="main_pressure"></td>
+                            </tr>
+                            <tr>
+                                <td>Humidity</td>
+                                <td id="main_humidity"></td>
+                            </tr>
+                            <tr>
+                                <td>Min. Temp</td>
+                                <td id="min_temp"></td>
+                            </tr>
+                            <tr>
+                                <td>Max. Temp</td>
+                                <td id="max_temp"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div><h1 class="text-info">Forecast</h1></div>
+                <div id="forcast_details">
+                    <div> 
+                        <table id="forecast_table" class="table table-responsive table-bordered table-hover table-striped small">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Min. Temp</th>
+                                    <th>Max. Temp</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>            
+        </div>      
+    </div>
+</body>
+</html>
